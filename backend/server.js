@@ -7,42 +7,83 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors({
-    origin: "http://localhost:5173"
-}));
+/* ---------------- CORS CONFIG ---------------- */
+
+const allowedOrigins = [
+    "http://localhost:5173", // local frontend
+    "https://your-frontend-domain.vercel.app" // replace after Vercel deploy
+];
+
+app.use(
+    cors({
+        origin: function (origin, callback) {
+            if (!origin) return callback(null, true); // allow Postman / curl
+            if (allowedOrigins.includes(origin)) {
+                callback(null, true);
+            } else {
+                callback(new Error("Not allowed by CORS"));
+            }
+        }
+    })
+);
 
 app.use(express.json());
 
+/* ---------------- GROQ SETUP ---------------- */
+
+if (!process.env.GROQ_API_KEY) {
+    console.error("❌ GROQ_API_KEY missing in environment variables");
+    process.exit(1);
+}
+
 const groq = new Groq({
-    apiKey: process.env.GROQ_API_KEY,
+    apiKey: process.env.GROQ_API_KEY
 });
+
+/* ---------------- HEALTH CHECK ---------------- */
+
+app.get("/", (req, res) => {
+    res.json({
+        status: "Backend is running",
+        service: "AI Outbound Lab API"
+    });
+});
+
+/* ---------------- GENERATE ROUTE ---------------- */
 
 app.post("/generate", async (req, res) => {
     console.log("Incoming request:", req.body);
 
-    const { type, input, tone } = req.body;
+    const { type, input, tone = "Professional" } = req.body;
 
-    if (!input || !type) {
-        return res.status(400).json({ error: "Missing required fields." });
+    if (!type || !input) {
+        return res
+            .status(400)
+            .json({ error: "Missing required fields: type, input" });
     }
 
-    let prompt = "";
+    let prompt;
 
-    if (type === "rewrite") {
-        prompt = `
-Rewrite the following cold DM to improve clarity, engagement, and reply rate.
+    switch (type) {
+        case "rewrite":
+            prompt = `
+Rewrite this cold DM.
 
 Tone: ${tone}
 
 Message:
 ${input}
 
-Make it concise, human, and natural.
+Rules:
+- Keep under 80 words.
+- No fluff.
+- No generic lines.
+- Make it human and direct.
 `;
-    }
+            break;
 
-    if (type === "email") {
-        prompt = `
+        case "email":
+            prompt = `
 Write a personalized cold email.
 
 Tone: ${tone}
@@ -50,18 +91,19 @@ Tone: ${tone}
 Context:
 ${input}
 
-Structure:
-- Strong opening hook
-- Clear value proposition
-- Short body
-- Soft CTA
-Keep it under 120 words.
+Rules:
+- Under 120 words.
+- Strong opening line.
+- Clear value.
+- One specific insight or metric.
+- Soft CTA.
+- No placeholders like [Name] or [Company].
 `;
-    }
+            break;
 
-    if (type === "objection") {
-        prompt = `
-Respond strategically to this objection.
+        case "objection":
+            prompt = `
+Handle this sales objection strategically.
 
 Tone: ${tone}
 
@@ -69,12 +111,16 @@ Objection:
 ${input}
 
 Rules:
-- Acknowledge briefly
-- Reframe with value
-- Avoid being defensive
-- End with soft CTA
-Keep it concise.
+- Acknowledge briefly.
+- Reframe with value.
+- Avoid defensiveness.
+- End with low-friction CTA.
+- Under 100 words.
 `;
+            break;
+
+        default:
+            return res.status(400).json({ error: "Invalid type provided." });
     }
 
     try {
@@ -84,16 +130,15 @@ Keep it concise.
                 {
                     role: "system",
                     content: `
-You are a top 1% cold email strategist.
+You are a top-tier outbound copy strategist.
 
-Rules:
-- No buzzwords.
-- No corporate fluff.
-- No vague phrases like "unlock growth" or "transform strategy".
-- Sound conversational, not marketing-heavy.
-- Use short sentences.
-- Include one specific insight or metric.
-- End with a low-friction CTA.
+Strict rules:
+- No hype.
+- No corporate buzzwords.
+- No exaggerated claims.
+- Conversational tone.
+- Short sentences.
+- Clear thinking.
 `
                 },
                 {
@@ -101,23 +146,23 @@ Rules:
                     content: prompt
                 }
             ],
-            temperature: 0.8,
-            max_tokens: 500
+            temperature: 0.7,
+            max_tokens: 400
         });
 
         res.json({
             result: completion.choices[0].message.content
         });
-
-    } catch (err) {
-        console.error("FULL ERROR:");
-        console.error(err);
-        res.status(500).json({ error: err.message });
+    } catch (error) {
+        console.error("FULL ERROR:", error);
+        res.status(500).json({ error: "AI generation failed." });
     }
 });
+
+/* ---------------- SERVER START ---------------- */
 
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Backend running on port ${PORT}`);
+    console.log(`🚀 Backend running on port ${PORT}`);
 });
