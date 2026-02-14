@@ -4,6 +4,9 @@
 
 AI Outbound Lab is a production-ready web application that helps sales teams and founders generate high-converting outbound messages using AI. Built with React, Node.js, and Groq's LLM API.
 
+[![Live Demo](https://img.shields.io/badge/Live-Demo-green?style=for-the-badge&logo=vercel)](https://ai-outbound-lab.vercel.app/)
+
+
 ---
 
 ## Screenshots
@@ -187,7 +190,7 @@ ai-outbound-lab/
 Update `backend/server.js` to allow your frontend domain:
 ```javascript
 app.use(cors({
-  origin: 'https://ai-outbound-lab.vercel.app/'
+  origin: 'https://your-frontend-domain.com'
 }));
 ```
 
