@@ -187,7 +187,7 @@ ai-outbound-lab/
 Update `backend/server.js` to allow your frontend domain:
 ```javascript
 app.use(cors({
-  origin: 'https://your-frontend-domain.com'
+  origin: 'https://ai-outbound-lab.vercel.app/'
 }));
 ```
 
