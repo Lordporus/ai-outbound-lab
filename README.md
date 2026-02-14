@@ -107,7 +107,7 @@ ai-outbound-lab/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/ai-outbound-lab.git
+   git clone https://github.com/lordporus/ai-outbound-lab.git
    cd ai-outbound-lab
    ```
 
